@@ -1,24 +1,43 @@
-"""
-IMDb Movie Analysis (placeholder)
+import matplotlib
 
-This file will contain code to analyze scraped IMDb movie data using Pandas.
-For now, it only provides a simple, beginner-friendly skeleton.
-"""
+matplotlib.use("Agg")
 
+import matplotlib.pyplot as plt
+import pandas as pd
+from pathlib import Path
 
-def main() -> None:
-    """
-    Entry point for the analysis script.
+_data = Path(__file__).resolve().parent.parent / "data" / "movies_upgraded1.csv"
+df = pd.read_csv(_data)
 
-    Later, this function will:
-    - read data from data/movies.csv (using pandas)
-    - clean/transform the dataset
-    - create simple plots (using matplotlib)
-    """
+# CSV column is `runtime` (seconds); keep minutes/hours for reporting
+df["runtime_minutes"] = df["runtime"] / 60
+df['runtime_hours'] = df['runtime_minutes'] / 60
 
-    # TODO: Implement analysis logic.
-    print("Analysis placeholder: implement Pandas analysis here.")
+print(df.isnull().sum())
 
+top_movies = df.sort_values(by='rating', ascending=False)
+print(top_movies[["title", "rating", "runtime_hours"]].head())
 
-if __name__ == "__main__":
-    main()
+yearly = df.groupby("year")["rating"].mean().sort_values(ascending=False)
+print(yearly.head(10))
+
+df["genres"] = df["genres"].str.split(", ")
+
+df_exploded = df.explode("genres")
+
+top10 = df.sort_values(by="rating", ascending=False).head(10)
+
+plt.figure()
+plt.barh(top10["title"], top10["rating"])
+plt.xlabel("Rating")
+plt.title("Top 10 Movies")
+plt.gca().invert_yaxis()
+plt.tight_layout()
+_chart = Path(__file__).resolve().parent / "top10_movies.png"
+plt.savefig(_chart, dpi=150, bbox_inches="tight")
+plt.close()
+print(f"Saved chart: {_chart}")
+
+new_file = Path(__file__).resolve().parent.parent / "data" / "movies_cleaned.csv"
+
+df.to_csv(new_file, index=False)
